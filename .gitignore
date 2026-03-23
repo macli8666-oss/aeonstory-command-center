@@ -1,0 +1,40 @@
+# 环境变量和敏感信息
+.env
+.env.local
+.env.production
+*.key
+*.pem
+
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建输出
+dist/
+build/
+*.log
+
+# 临时文件
+/tmp/
+*.tmp
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 测试
+coverage/
+.nyc_output/
+
+# 生产资源（临时文件）
+/tmp/aeonstory-videos/
+
+# 数据库备份
+*.sql
+*.dump
+
+# Claude Code项目记忆
+.claude/

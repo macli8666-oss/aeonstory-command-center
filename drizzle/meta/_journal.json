@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1773978063610,
+      "tag": "0000_melodic_lady_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1773978435432,
+      "tag": "0001_useful_starfox",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773979138292,
+      "tag": "0002_loud_imperial_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1773981067581,
+      "tag": "0003_premium_hairball",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773990387438,
+      "tag": "0004_flimsy_rocket_raccoon",
+      "breakpoints": true
+    }
+  ]
+}

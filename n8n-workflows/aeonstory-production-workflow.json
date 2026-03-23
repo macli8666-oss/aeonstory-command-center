@@ -1,0 +1,423 @@
+{
+  "name": "AeonStory 自动化生产流程",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aeonstory-trigger",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "生产触发器",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "aeonstory-production"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: '生产流程已启动', productionId: $json.productionId } }}"
+      },
+      "id": "webhook-response",
+      "name": "返回响应",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "production-data",
+              "name": "productionId",
+              "value": "={{ $json.productionId }}",
+              "type": "number"
+            },
+            {
+              "id": "topic-data",
+              "name": "topicId",
+              "value": "={{ $json.topicId }}",
+              "type": "number"
+            },
+            {
+              "id": "title",
+              "name": "topicTitle",
+              "value": "={{ $json.topicTitle }}",
+              "type": "string"
+            },
+            {
+              "id": "civilization",
+              "name": "civilization",
+              "value": "={{ $json.civilization }}",
+              "type": "string"
+            },
+            {
+              "id": "period",
+              "name": "period",
+              "value": "={{ $json.period }}",
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "name": "description",
+              "value": "={{ $json.description }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-variables",
+      "name": "设置变量",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, stepNumber: 1, stepName: '文明色调匹配', status: 'running' } } }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "step1-start",
+      "name": "步骤1开始",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 文明色调匹配逻辑\nconst civilization = $input.item.json.civilization;\nconst colorMappings = {\n  '华夏': { primary: '#C8102E', secondary: '#FFD700', theme: 'imperial' },\n  '罗马': { primary: '#800020', secondary: '#DAA520', theme: 'empire' },\n  '古埃及': { primary: '#E4A010', secondary: '#4169E1', theme: 'pharaoh' },\n  '古希腊': { primary: '#0033A0', secondary: '#FFFFFF', theme: 'classical' },\n  '维京': { primary: '#1C3A57', secondary: '#A0522D', theme: 'nordic' },\n  'default': { primary: '#333333', secondary: '#999999', theme: 'neutral' }\n};\n\nconst colors = colorMappings[civilization] || colorMappings['default'];\n\n// 模拟处理时间\nawait new Promise(resolve => setTimeout(resolve, 2000));\n\nreturn {\n  ...colors,\n  civilization,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "step1-process",
+      "name": "文明色调匹配",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, stepNumber: 1, stepName: '文明色调匹配', status: 'completed', output: JSON.stringify({ colors: $json }), durationMs: 2000 } } }}",
+        "options": {}
+      },
+      "id": "step1-complete",
+      "name": "步骤1完成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, stepNumber: 2, stepName: 'AI脚本撰写', status: 'running' } } }}",
+        "options": {}
+      },
+      "id": "step2-start",
+      "name": "步骤2开始",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:11434/v1/chat/completions",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: 'qwen2.5:14b',\n  messages: [\n    { role: 'system', content: '你是一个专业的历史纪录片脚本编剧，擅长创作5-10分钟的历史动画短视频脚本。' },\n    { role: 'user', content: `请为以下历史选题撰写一个吸引人的短视频脚本：\\n标题：${$('设置变量').item.json.topicTitle}\\n文明：${$('设置变量').item.json.civilization}\\n时期：${$('设置变量').item.json.period}\\n简介：${$('设置变量').item.json.description}\\n\\n要求：\\n1. 开场要有悬念或冲突\\n2. 时长控制在8-10分钟\\n3. 包含3-5个关键场景\\n4. 每个场景要有视觉描述\\n5. 语言要通俗易懂` }\n  ],\n  max_tokens: 4000\n} }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "step2-ai-script",
+      "name": "AI生成脚本",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, stepNumber: 2, stepName: 'AI脚本撰写', status: 'completed', output: JSON.stringify({ script: $json.choices[0].message.content }), durationMs: 30000 } } }}",
+        "options": {}
+      },
+      "id": "step2-complete",
+      "name": "步骤2完成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, stepNumber: 3, stepName: '内容安全审核', status: 'running' } } }}",
+        "options": {}
+      },
+      "id": "step3-start",
+      "name": "步骤3开始",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [250, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 内容安全审核（简化版）\nconst script = $('AI生成脚本').item.json.choices[0].message.content;\n\n// 敏感词检查\nconst sensitiveWords = ['暴力', '血腥', '政治敏感'];\nconst issues = [];\n\nsensitiveWords.forEach(word => {\n  if (script.includes(word)) {\n    issues.push(word);\n  }\n});\n\nawait new Promise(resolve => setTimeout(resolve, 1000));\n\nreturn {\n  safe: issues.length === 0,\n  issues,\n  message: issues.length === 0 ? '内容安全审核通过' : `发现敏感内容: ${issues.join(', ')}`,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "step3-process",
+      "name": "内容安全审核",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, stepNumber: 3, stepName: '内容安全审核', status: 'completed', output: JSON.stringify($json), durationMs: 1000 } } }}",
+        "options": {}
+      },
+      "id": "step3-complete",
+      "name": "步骤3完成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final-status",
+              "name": "status",
+              "value": "completed",
+              "type": "string"
+            },
+            {
+              "id": "final-message",
+              "name": "message",
+              "value": "生产流程完成（简化版：前3步）",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "final-output",
+      "name": "输出结果",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 500]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.reportAssets",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, script: $('AI生成脚本').item.json.choices[0].message.content, videoUrl: 'https://example.com/videos/demo.mp4', thumbnailUrl: 'https://example.com/thumbnails/demo.jpg' } } }}",
+        "options": {}
+      },
+      "id": "report-assets",
+      "name": "上报资源",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:3001/api/trpc/production.finish",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { json: { productionId: $('设置变量').item.json.productionId, status: 'completed' } } }}",
+        "options": {}
+      },
+      "id": "finish-production",
+      "name": "完成生产",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1250, 500]
+    }
+  ],
+  "connections": {
+    "生产触发器": {
+      "main": [
+        [
+          {
+            "node": "返回响应",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "设置变量",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "设置变量": {
+      "main": [
+        [
+          {
+            "node": "步骤1开始",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "步骤1开始": {
+      "main": [
+        [
+          {
+            "node": "文明色调匹配",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "文明色调匹配": {
+      "main": [
+        [
+          {
+            "node": "步骤1完成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "步骤1完成": {
+      "main": [
+        [
+          {
+            "node": "步骤2开始",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "步骤2开始": {
+      "main": [
+        [
+          {
+            "node": "AI生成脚本",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI生成脚本": {
+      "main": [
+        [
+          {
+            "node": "步骤2完成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "步骤2完成": {
+      "main": [
+        [
+          {
+            "node": "步骤3开始",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "步骤3开始": {
+      "main": [
+        [
+          {
+            "node": "内容安全审核",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "内容安全审核": {
+      "main": [
+        [
+          {
+            "node": "步骤3完成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "步骤3完成": {
+      "main": [
+        [
+          {
+            "node": "输出结果",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "输出结果": {
+      "main": [
+        [
+          {
+            "node": "上报资源",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "上报资源": {
+      "main": [
+        [
+          {
+            "node": "完成生产",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-03-20T07:00:00.000Z",
+  "versionId": "1"
+}

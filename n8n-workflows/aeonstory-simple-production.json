@@ -1,0 +1,242 @@
+{
+  "name": "AeonStory 生产流程（简化版）",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aeonstory-production",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "aeonstory-simple-prod"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\"success\": true, \"message\": \"生产已启动\", \"productionId\": $json.productionId} }}"
+      },
+      "id": "response-1",
+      "name": "返回响应",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return { \n  productionId: $input.item.json.productionId,\n  topicId: $input.item.json.topicId,\n  title: $input.item.json.topicTitle,\n  civilization: $input.item.json.civilization,\n  period: $input.item.json.period,\n  description: $input.item.json.description\n};"
+      },
+      "id": "code-1",
+      "name": "提取数据",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $json.productionId, \"stepNumber\": 1, \"stepName\": \"文明色调匹配\", \"status\": \"running\"}} }}",
+        "options": {}
+      },
+      "id": "http-1",
+      "name": "步骤1-开始",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const colorMap = {\n  '华夏': {primary: '#C8102E', secondary: '#FFD700'},\n  '罗马': {primary: '#800020', secondary: '#DAA520'},\n  '古埃及': {primary: '#E4A010', secondary: '#4169E1'},\n  '古希腊': {primary: '#0033A0', secondary: '#FFFFFF'},\n  '维京': {primary: '#1C3A57', secondary: '#A0522D'}\n};\nconst colors = colorMap[$input.item.json.civilization] || {primary: '#333', secondary: '#999'};\nreturn {...$input.item.json, colors};"
+      },
+      "id": "code-2",
+      "name": "色调匹配处理",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"stepNumber\": 1, \"stepName\": \"文明色调匹配\", \"status\": \"completed\", \"output\": JSON.stringify($json.colors), \"durationMs\": 1000}} }}",
+        "options": {}
+      },
+      "id": "http-2",
+      "name": "步骤1-完成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"stepNumber\": 2, \"stepName\": \"AI脚本撰写\", \"status\": \"running\"}} }}",
+        "options": {}
+      },
+      "id": "http-3",
+      "name": "步骤2-开始",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/v1/chat/completions",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"model\": \"qwen2.5:14b\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": \"你是一个历史纪录片脚本编剧。请用中文撰写简洁有趣的5分钟短视频脚本。\"},\n    {\"role\": \"user\", \"content\": \"标题：\" + $('提取数据').item.json.title + \"\\n文明：\" + $('提取数据').item.json.civilization + \"\\n时期：\" + $('提取数据').item.json.period + \"\\n简介：\" + $('提取数据').item.json.description + \"\\n\\n请撰写一个5分钟的短视频脚本，包含开场、3个主要场景和结尾。\"}\n  ],\n  \"max_tokens\": 2000\n} }}",
+        "options": {}
+      },
+      "id": "http-4",
+      "name": "Ollama生成脚本",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"stepNumber\": 2, \"stepName\": \"AI脚本撰写\", \"status\": \"completed\", \"output\": JSON.stringify({\"script\": $json.choices[0].message.content}), \"durationMs\": 10000}} }}",
+        "options": {}
+      },
+      "id": "http-5",
+      "name": "步骤2-完成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"stepNumber\": 3, \"stepName\": \"内容安全审核\", \"status\": \"running\"}} }}",
+        "options": {}
+      },
+      "id": "http-6",
+      "name": "步骤3-开始",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "return {safe: true, message: '审核通过'};"
+      },
+      "id": "code-3",
+      "name": "安全审核",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.updateStep",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"stepNumber\": 3, \"stepName\": \"内容安全审核\", \"status\": \"completed\", \"output\": JSON.stringify($json), \"durationMs\": 500}} }}",
+        "options": {}
+      },
+      "id": "http-7",
+      "name": "步骤3-完成",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.reportAssets",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"script\": $('Ollama生成脚本').item.json.choices[0].message.content, \"videoUrl\": \"https://demo.aeonstory.com/videos/sample.mp4\", \"thumbnailUrl\": \"https://demo.aeonstory.com/thumbnails/sample.jpg\"}} }}",
+        "options": {}
+      },
+      "id": "http-8",
+      "name": "上报资源",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2880, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/trpc/production.finish",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"json\": {\"productionId\": $('提取数据').item.json.productionId, \"status\": \"completed\"}} }}",
+        "options": {}
+      },
+      "id": "http-9",
+      "name": "完成生产",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3100, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "返回响应", "type": "main", "index": 0}, {"node": "提取数据", "type": "main", "index": 0}]]
+    },
+    "提取数据": {
+      "main": [[{"node": "步骤1-开始", "type": "main", "index": 0}]]
+    },
+    "步骤1-开始": {
+      "main": [[{"node": "色调匹配处理", "type": "main", "index": 0}]]
+    },
+    "色调匹配处理": {
+      "main": [[{"node": "步骤1-完成", "type": "main", "index": 0}]]
+    },
+    "步骤1-完成": {
+      "main": [[{"node": "步骤2-开始", "type": "main", "index": 0}]]
+    },
+    "步骤2-开始": {
+      "main": [[{"node": "Ollama生成脚本", "type": "main", "index": 0}]]
+    },
+    "Ollama生成脚本": {
+      "main": [[{"node": "步骤2-完成", "type": "main", "index": 0}]]
+    },
+    "步骤2-完成": {
+      "main": [[{"node": "步骤3-开始", "type": "main", "index": 0}]]
+    },
+    "步骤3-开始": {
+      "main": [[{"node": "安全审核", "type": "main", "index": 0}]]
+    },
+    "安全审核": {
+      "main": [[{"node": "步骤3-完成", "type": "main", "index": 0}]]
+    },
+    "步骤3-完成": {
+      "main": [[{"node": "上报资源", "type": "main", "index": 0}]]
+    },
+    "上报资源": {
+      "main": [[{"node": "完成生产", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-03-20T07:45:00.000Z",
+  "versionId": "1"
+}

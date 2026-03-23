@@ -1,0 +1,33 @@
+
+✅ AeonStory Command Center - Deployment Summary
+
+服务地址: http://localhost:3001/
+
+核心功能验证:
+✓ Web界面加载正常
+✓ tRPC API正常工作
+✓ PostgreSQL数据库连接成功
+✓ 选题管理 CRUD功能正常
+✓ 社交媒体账号管理功能正常
+
+已创建测试数据:
+- 选题: 2个（华夏、罗马文明）
+- 社交账号: 1个（YouTube）
+
+数据库配置:
+- 主机: localhost:5432
+- 数据库: aeonstory
+- 用户: aeonstory
+
+关键修改完成:
+✓ MySQL → PostgreSQL 迁移
+✓ Manus平台依赖移除
+✓ 本地Ollama LLM集成
+✓ 本地化认证（无需登录）
+✓ 所有数据表正确创建
+
+注意事项:
+- 本地PostgreSQL@16已停止，避免端口冲突
+- 仅使用Docker容器中的PostgreSQL
+- n8n工作流配置: http://localhost:5678
+
